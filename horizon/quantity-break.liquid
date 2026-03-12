@@ -1,0 +1,97 @@
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    console.log("[qty-variant] init");
+
+    const product = {{ product | json }};
+    const quantityInput = document.querySelector(
+      'input[name="quantity"]'
+    );
+
+    if (!quantityInput) {
+      console.warn("[qty-variant] form or qty input not found");
+      return;
+    }
+
+    const ranges = [
+      {% for v in product.variants %}
+      {% if v.metafields.custom.cantidad_minima != blank
+        or v.metafields.custom.cantidad_maxima != blank %}
+      {
+        id: {{ v.id }},
+        title: "{{ v.title }}",
+        min: {{ v.metafields.custom.cantidad_minima | default: 0 }},
+        max: {{ v.metafields.custom.cantidad_maxima | default: 999999 }}
+      },
+      {% endif %}
+      {% endfor %}
+    ];
+
+    addListeners();
+    addVariantListeners();
+
+    function addListeners() {
+      observeInputValue(quantityInput, (value) => {
+        const qty = Number(value);
+
+        const range = ranges.find(
+          (r) => qty >= r.min && qty <= r.max
+        );
+
+        if (!range) return;
+
+        const radio = document.querySelector(
+          `input[type="radio"][data-variant-id="${range.id}"]`
+        );
+
+        if (!radio) {
+          console.warn(
+            "[qty-variant] radio not found for",
+            range.id
+          );
+          return;
+        }
+
+        radio.click();
+      });
+    }
+
+    function addVariantListeners() {
+      ranges.forEach((variant) => {
+        const radio = document.querySelector(
+          `input[type="radio"][data-variant-id="${variant.id}"]`
+        );
+
+        if (!radio) return;
+
+        radio.addEventListener("change", () => {
+          if (!radio.checked) return;
+
+          quantityInput.value = String(variant.min);
+        });
+      });
+    }
+
+    function observeInputValue(input, onChange) {
+      const descriptor = Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        "value"
+      );
+
+      if (!descriptor?.set || !descriptor.get) return;
+
+      Object.defineProperty(input, "value", {
+        get() {
+          return descriptor.get.call(this);
+        },
+        set(v) {
+          const prev = descriptor.get.call(this);
+          descriptor.set.call(this, v);
+
+          if (v !== prev) {
+            onChange(v);
+          }
+        }
+      });
+    }
+  });
+</script>
