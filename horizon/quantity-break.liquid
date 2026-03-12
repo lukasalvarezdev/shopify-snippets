@@ -20,81 +20,55 @@
   document.addEventListener("DOMContentLoaded", () => {
     console.log("[qty-variant] init");
 
-    const product = {{ product | json }};
-    const quantityInput = document.querySelector(
-      'input[name="quantity"]'
-    );
+    const quantityInput = document.querySelector('input[name="quantity"]');
 
     if (!quantityInput) {
-      console.warn("[qty-variant] form or qty input not found");
+      console.warn("[qty-variant] quantity input not found");
       return;
     }
 
-    // Build array of quantity ranges from variant metafields
     const ranges = [
       {% for v in product.variants %}
       {% if v.metafields.custom.cantidad_minima != blank
         or v.metafields.custom.cantidad_maxima != blank %}
       {
         id: {{ v.id }},
-        title: "{{ v.title }}",
         min: {{ v.metafields.custom.cantidad_minima | default: 0 }},
-        max: {{ v.metafields.custom.cantidad_maxima | default: 999999 }}
+        max: {{ v.metafields.custom.cantidad_maxima | default: 999999 }},
+        radio: document.querySelector('input[type="radio"][data-variant-id="{{ v.id }}"]')
       },
       {% endif %}
       {% endfor %}
-    ];
+    ].filter((r) => r.radio);
 
-    addListeners();
-    addVariantListeners();
-
-    // Quantity input -> Variant selection
-    // When quantity changes, find matching range and click that variant's radio
-    function addListeners() {
-      observeInputValue(quantityInput, (value) => {
-        const qty = Number(value);
-
-        const range = ranges.find(
-          (r) => qty >= r.min && qty <= r.max
-        );
-
-        if (!range) return;
-
-        const radio = document.querySelector(
-          `input[type="radio"][data-variant-id="${range.id}"]`
-        );
-
-        if (!radio) {
-          console.warn(
-            "[qty-variant] radio not found for",
-            range.id
-          );
-          return;
-        }
-
-        radio.click();
-      });
+    if (!ranges.length) {
+      console.warn("[qty-variant] no valid ranges found");
+      return;
     }
 
-    // Variant selection -> Quantity input
-    // When a variant radio is clicked, set quantity to that variant's minimum
-    function addVariantListeners() {
-      ranges.forEach((variant) => {
-        const radio = document.querySelector(
-          `input[type="radio"][data-variant-id="${variant.id}"]`
-        );
+    let isUpdating = false;
 
-        if (!radio) return;
+    observeInputValue(quantityInput, (value) => {
+      if (isUpdating) return;
 
-        radio.addEventListener("change", () => {
-          if (!radio.checked) return;
+      const qty = Number(value);
+      const range = ranges.find((r) => qty >= r.min && qty <= r.max);
 
-          quantityInput.value = String(variant.min);
-        });
+      if (range && !range.radio.checked) {
+        range.radio.click();
+      }
+    });
+
+    ranges.forEach((variant) => {
+      variant.radio.addEventListener("change", () => {
+        if (!variant.radio.checked) return;
+
+        isUpdating = true;
+        quantityInput.value = String(variant.min);
+        isUpdating = false;
       });
-    }
+    });
 
-    // Observe input value changes (works for programmatic changes too)
     function observeInputValue(input, onChange) {
       const descriptor = Object.getOwnPropertyDescriptor(
         HTMLInputElement.prototype,
