@@ -15,3 +15,11 @@ Syncs quantity input with variant selection based on quantity ranges.
    - `custom.cantidad_minima` (integer)
    - `custom.cantidad_maxima` (integer)
 2. Paste the snippet at the bottom of `snippets/product-information-content.liquid`
+
+### horizon/whatsapp-button.liquid
+
+Floating WhatsApp button in the bottom-right corner.
+
+**Setup:**
+1. Replace the phone number and pre-filled message in the href
+2. Paste in `theme.liquid` before `</body>`
