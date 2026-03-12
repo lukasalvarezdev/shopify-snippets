@@ -1,3 +1,21 @@
+{%- comment -%}
+  QUANTITY BREAK SNIPPET
+  ======================
+  Paste this at the bottom of: snippets/product-information-content.liquid
+
+  SETUP:
+  1. Create variant metafields in Shopify Admin > Settings > Custom data > Variants:
+     - custom.cantidad_minima (integer) - minimum quantity for this variant
+     - custom.cantidad_maxima (integer) - maximum quantity for this variant
+
+  2. Fill in the metafield values for each product variant
+
+  WHAT IT DOES:
+  - Bidirectional sync between quantity input and variant selection
+  - When quantity changes -> auto-selects the variant matching that quantity range
+  - When variant is clicked -> sets the quantity to that variant's minimum
+{%- endcomment -%}
+
 <script>
   document.addEventListener("DOMContentLoaded", () => {
     console.log("[qty-variant] init");
@@ -12,6 +30,7 @@
       return;
     }
 
+    // Build array of quantity ranges from variant metafields
     const ranges = [
       {% for v in product.variants %}
       {% if v.metafields.custom.cantidad_minima != blank
@@ -29,6 +48,8 @@
     addListeners();
     addVariantListeners();
 
+    // Quantity input -> Variant selection
+    // When quantity changes, find matching range and click that variant's radio
     function addListeners() {
       observeInputValue(quantityInput, (value) => {
         const qty = Number(value);
@@ -55,6 +76,8 @@
       });
     }
 
+    // Variant selection -> Quantity input
+    // When a variant radio is clicked, set quantity to that variant's minimum
     function addVariantListeners() {
       ranges.forEach((variant) => {
         const radio = document.querySelector(
@@ -71,6 +94,7 @@
       });
     }
 
+    // Observe input value changes (works for programmatic changes too)
     function observeInputValue(input, onChange) {
       const descriptor = Object.getOwnPropertyDescriptor(
         HTMLInputElement.prototype,
